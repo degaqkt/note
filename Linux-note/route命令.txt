@@ -1,0 +1,332 @@
+1 概述
+
+route命令用于显示和操作IP路由表。要实现两个不同的子网之间的通信，需要一台连接两个网络的路由器，或者同时位于两个网络的网关来实现。在Linux系统中，设置路由通常是 为了解决以下问题：该Linux系统在一个局域网中，局域网中有一个网关，能够让机器访问Internet，那么就需要将这台机器的IP地址设置为 Linux机器的默认路由。要注意的是，直接在命令行下执行route命令来添加路由，不会永久保存，当网卡重启或者机器重启之后，该路由就失效了；要想永久保存，可以保存到配置文件。linux 默认只支持一条默认路由，当重新启动网口时，会把其他默认路由去掉，只剩下一条该网口生成的默认路由。当然可以通过 route 命令手动添加多条默认路由，如果多条路由一样，则选择最开始找到的路由(排在前面的路由)。
+
+2 命令详解
+
+2.1 命令格式
+
+route [-CFvnee]
+ 
+route [-v] [-A family] add [-net|-host] target [netmask Nm] [gw Gw] [metric N] 
+      [mss M] [window W] [irtt I] [reject] [mod] [dyn] [reinstate] [[dev] If]
+route [-v] [-A family] del [-net|-host] target [gw Gw] [netmask Nm] [metric N] [[dev] If]
+route [-V] [--version] [-h] [--help]
+ 
+2.2 常用选项和参数说明 
+
+(1) 选项
+
+参数    	说明
+-C    	显示路由缓存。
+-F		显示发送信息
+-v		显示详细的处理信息。
+-n		不解析名字。
+-ee		使用更详细的资讯来显示
+-V		显示版本信息。
+-net		到一个网络的路由表。
+-host		到一个主机的路由表。
+ 
+(2) 参数
+
+参数		说明
+add		增加路由记录。
+del		删除路由记录。
+target	目的网络或目的主机。
+gw		设置默认网关。gateway 的简写，后续接的是 IP 的数值。
+mss		设置TCP的最大区块长度（MSS），单位MB。
+window	指定通过路由表的TCP连接的TCP窗口大小。
+dev		如果只是要指定由那一块网路卡连线出去，则使用这个设定，后面接 eth0 等。
+reject	设置到指定网络为不可达，避免在连接到这个网络的地址时程序过长时间的等待，直接就知道该网络不可达。
+ 
+2.3 常用命令格式
+
+(1) 添加和删除路由
+
+route {add | del } [-net|-host] [网域或主机] netmask [mask] [gw|dev]
+
+增加 (add) 与删除 (del) 路由的相关参数：
+(a) -net ：表示后面接的路由为一个网域。
+(b) -host ：表示后面接的为连接到单部主机的路由。
+(c) netmask ：与网域有关，可以设定 netmask 决定网域的大小。
+(d) gw ：gateway 的简写，后续接的是 IP 的数值，与 dev 不同。
+(e) dev ：如果只是要指定由那一块网路卡连线出去，则使用这个设定，后面接 eth0 等。
+ 
+(2) 查询路由信息
+
+route -nee
+
+(a) -n：不要使用通讯协定或主机名称，直接使用 IP 或 port number。
+(b) -ee：使用更详细的资讯来显示。
+ 
+(3) 添加/删除默认网关路由
+
+route {add | del } default gw {IP-ADDRESS} {INTERFACE-NAME}
+ 
+(a) IP-ADDRESS：用于指定路由器（网关）的IP地址。
+(b) INTERFACE-NAME：用于指定接口名称，如eth0。
+  
+例1：route add default gw 192.168.1.1 eth0
+例2：route del default gw 192.168.1.1 eth0
+ 
+(4) 添加/删除到指定网络的路由规则
+
+route {add | del } -net {NETWORK-ADDRESS} netmask {NETMASK} dev {INTERFACE-NAME}
+ 
+(a) NETWORK-ADDRESS：用于指定网络地址。
+(b) NETMASK：用于指定子网掩码。
+(c) INTERFACE-NAME：用于指定接口名称，如eth0。
+  
+例1：route add -net 192.168.1.0 netmask 255.255.255.0 dev eth0
+例2：route del -net 192.168.1.0 netmask 255.255.255.0 dev eth0
+ 
+(5) 添加/删除路由到指定网络为不可达
+
+设置到指定网络为不可达，避免在连接到这个网络的地址时程序过长时间的等待，直接就知道该网络不可达。
+ 
+route {add | del } -net {NETWORK-ADDRESS} netmask {NETMASK} reject
+ 
+(a) NETWORK-ADDRESS：用于指定网络地址。
+(b) NETMASK：用于指定子网掩码。
+  
+例1：route add -net 10.0.0.0 netmask 255.0.0.0 reject
+例2：route del -net 10.0.0.0 netmask 255.0.0.0 reject
+ 
+3 输出详解
+
+(1) 查看路由信息
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    0      0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+ 
+(2) 说明
+
+route命令输出的路由表字段含义如下：
+
+字段		说明
+Destination	目标网络或目标主机。Destination 为 default（0.0.0.0）时，表示这个是默认网关，所有数据都发到这个网关。
+Gateway	网关地址，0.0.0.0 表示当前记录对应的 Destination 跟本机在同一个网段，通信时不需要经过网关。如果没有就显示星号(*)。
+Genmask	Destination 字段的网络掩码，Destination 是主机时需要设为 255.255.255.255，是默认路由时会设置为 0.0.0.0
+				标记
+
+		● U 该路由可以使用。
+ 
+		● H 该路由是到一个主机，也就是说，目的地址是一个完整的主机地址。如果没有设置该标志，说明
+		该路由是到一个网络，而目的地址是一个网络地址：一个网络号，或者网络号与子网号的组合。
+ 
+Flags		● G 该路由是到一个网关（路由器）。如果没有设置该标志，说明目的地 是直接相连的。
+ 
+		● R 恢复动态路由产生的表项。
+ 
+		● D 该路由是由改变路由（redirect）报文创建的。
+ 
+		● M 该路由已被改变路由报文修改。
+ 
+		● ! 这个路由将不会被接受。
+
+Metric	路由距离，到达指定网络所需的中转数，是大型局域网和广域网设置所必需的。
+Ref		路由项引用次数 。
+Use		此路由项被路由软件查找的次数。
+Iface		网卡名字，例如 eth0。
+ 
+4 实例分析
+
+4.1 路由选择分析
+
+当TCP/IP需要向某个IP地址发起通信时，它会对路由表进行评估，以确定如何发送数据包。评估过程如下：
+
+(1) TCP/IP使用需要通信的目的IP地址和路由表中每一个路由项的网络掩码进行相与计算，如果相与后的结果匹配对应路由项的网络地址，则记录下此路由项。
+
+(2) 当计算完路由表中所有的路由项后，
+
+(a) TCP/IP选择记录下的路由项中的最长匹配路由（网络掩码中具有最多“1”位的路由项）来和此目的IP地址进行通信。
+
+(b) 如果存在多个最长匹配路由，那么选择具有最低跃点数的路由项。
+
+(c) 如果存在多个具有最低跃点数的最长匹配路由，那么：均根据最长匹配路由所对应的网络接口在网络连接的高级设置中的绑定优先级来决定(一般有线(eth0) > 无线 (wlan0) > 移动信号(4G))。
+
+(d) 如果优先级一致，则选择最开始找到的最长匹配路由。(排在前面的路由)
+
+4.1.1 验证分析
+
+(1) 验证：traceroute www.baidu.com
+
+我们通过路由表可以知道有两条相同默认路由可以选择，由于先找到192.168.233.2 网关路由，所以最后选择了 192.168.233.2 网关。
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.233.2   0.0.0.0         UG    0      0        0 eth1
+0.0.0.0         192.168.1.1     0.0.0.0         UG    0      0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# traceroute www.baidu.com
+traceroute to www.baidu.com (14.215.177.39), 30 hops max, 60 byte packets
+ 1  gateway (192.168.233.2)  0.200 ms  0.109 ms  0.141 ms
+ 2  * * *
+ 3  * * *
+ 4  * * *
+ 
+(2) 删除原先路由，重新添加路由
+
+重新添加路由后，我们通过路由表可以知道有两条相同默认路由可以选择，由于先找到192.168.1.1 网关路由，所以最后选择了 192.168.1.1 网关。
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.233.2   0.0.0.0         UG    0      0        0 eth1
+0.0.0.0         192.168.1.1     0.0.0.0         UG    0      0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route del default gw 192.168.233.2
+ 
+[root@localhost ~]# route del default gw 192.168.1.1
+
+[root@localhost ~]# route add default gw 192.168.233.2
+ 
+[root@localhost ~]# route add default gw 192.168.1.1
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.1.1     0.0.0.0         UG    0      0        0 eth0
+0.0.0.0         192.168.233.2   0.0.0.0         UG    0      0        0 eth1
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# traceroute www.baidu.com
+traceroute to www.baidu.com (14.215.177.39), 30 hops max, 60 byte packets
+ 1  gateway (192.168.1.1)  2.683 ms  2.432 ms  15.680 ms
+ 2  * * *
+ 3  * * *
+ 4  * * *
+
+4.2 添加和删除路由
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0             192.168.233.2   0.0.0.0             UG    0      0        0 eth1
+169.254.0.0     0.0.0.0               255.255.0.0     U     1002   0       0 eth0
+192.168.1.0     0.0.0.0               255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0             255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route del -net 192.168.233.0 netmask 255.255.255.0 dev eth1
+# 上面这个动作可以删除掉 192.168.233.0/24 这个网域！
+# 请注意，在删除的时候，需要将路由表上面出现的资讯都写入
+# 包括  netmask , dev 等等参数！
+ 
+[root@localhost ~]# route add -net 192.168.233.0 netmask 255.255.255.0 dev eth1
+# 透过 route add 来增加一个路由！请注意，这个路由必须要能够与你互通。
+# 举例来说，如果我下达底下的指令就会显示错误：
+[root@localhost ~]# route add -net 192.168.200.0 netmask 255.255.255.0 gw 192.168.200.254
+# 因为我的环境内仅有 192.168.1.145 和 192.168.233.137 ，
+# 所以不能与 192.168.200.254这个网段直接使用 MAC 互通！
+ 
+[root@localhost ~]# route add default gw 192.168.1.1
+# 增加默认路由的方法！请注意，只要有一个默认路由就够了！
+# 在这个地方如果您随便设定后，记得使用底下的指令重新设定你的网路
+  /etc/init.d/network restart
+ 
+# 如果是要进行路由的删除与增加，那就得要参考上面的例子了，当出现『SIOCADDRT: Network is unreachable』这个错误时，
+# 肯定是由于 gw 后面接的 IP 无法直接与您的网域沟通 (Gateway 并不在你的网域内)。
+
+4.3 默认路由
+
+[root@localhost ~]# route add default  gw 192.168.233.2 dev eth1
+# 添加默认路由方式一，default
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.233.2   0.0.0.0         UG    0      0        0 eth1
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route del default gw 192.168.233.2 dev eth1
+# 删除默认路由方式一，default
+ 
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route add -net 0.0.0.0 netmask 0.0.0.0 gw 192.168.233.2 dev eth1
+# 添加默认路由方式二，-net 0.0.0.0 netmask 0.0.0.0
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0         192.168.233.2   0.0.0.0         UG    0      0        0 eth1
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route del -net 0.0.0.0 netmask 0.0.0.0 gw 192.168.233.2 dev eth1
+# 删除默认路由方式二，default
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+4.4 添加带metric的路由
+
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+169.254.0.0     0.0.0.0         255.255.0.0     U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0     U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0   U     0      0        0 eth0
+192.168.233.0   0.0.0.0         255.255.255.0   U     0      0        0 eth1
+
+[root@localhost ~]# route add default gw 192.168.233.2 dev eth1 metric 99
+ 
+[root@localhost ~]# route -n
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+0.0.0.0             192.168.233.2   0.0.0.0           UG    99     0        0 eth1
+169.254.0.0     0.0.0.0         255.255.0.0         U     1002   0        0 eth0
+169.254.0.0     0.0.0.0         255.255.0.0         U     1003   0        0 eth1
+192.168.1.0     0.0.0.0         255.255.255.0     U     0         0        0 eth0
+192.168.233.0   0.0.0.0       255.255.255.0     U     0         0        0 eth1
+
+5 WINDOWS下的route命令
+
+简单的的操作如下，
+
+(1) 查看路由状态：
+
+route print
+(2) 只查看ipv4（ipv6）路由状态：
+
+route print-4(-6)
+(3) 添加路由：route add 目的网络 mask 子网掩码 网关——重启机器或网卡失效
+
+route add 192.168.1.0 mask 255.255.255.0 192.168.1.1
+(4) 添加永久：route -p add 目的网络 mask子网掩码网关
+
+route -p add 192.168.1.0 mask 255.255.255.0 192.168.1.1
+(5) 删除路由：route delete 目的网络 mask 子网掩码
+
+route delete 192.168.1.0 mask 255.255.255.0
+
+————————————————
+
